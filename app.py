@@ -4,10 +4,6 @@ from flask import Flask, render_template, request
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-
 load_dotenv()
 
 def create_app():
@@ -20,8 +16,14 @@ def create_app():
         if request.method == "POST":
             entry_content = request.form.get("content")
             formatted_date = datetime.datetime.today().strftime("%Y-%m-%d")
-            app.db.entries.insert_one({"content": entry_content, "date": formatted_date})
-        
+            
+            # Check if the entry already exists in the database
+            existing_entry = app.db.entries.find_one({"content": entry_content})
+            
+            if not existing_entry:
+                # Insert only if the entry does not already exist
+                app.db.entries.insert_one({"content": entry_content, "date": formatted_date})
+
         entries_with_date = [
             (
                 entry["content"],
@@ -31,5 +33,11 @@ def create_app():
             for entry in app.db.entries.find({})
         ]
         return render_template("home.html", entries=entries_with_date)
-    
+
     return app
+
+if __name__ == "__main__":
+    app = create_app()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
+
